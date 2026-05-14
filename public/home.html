@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time-Off Home</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f7fafc;
+            margin: 0;
+            color: #1a202c;
+        }
+        .page {
+            max-width: 720px;
+            margin: 48px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+        }
+        .badge {
+            display: inline-block;
+            background: #edf2f7;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        ul {
+            padding-left: 20px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <h1 id="homeTitle">Home</h1>
+        <p id="welcomeText"></p>
+        <p class="badge" id="roleBadge"></p>
+        <h2>Role Entry Points</h2>
+        <ul id="roleEntries"></ul>
+        <button id="logoutButton" type="button">Log out</button>
+        <p id="logoutError" style="color: #c53030; display: none; margin-top: 12px;"></p>
+    </main>
+
+    <script>
+        const roleConfigurations = {
+            employee: {
+                title: 'Employee Home',
+                entries: ['Employee: Submit a time-off request', 'Employee: View my requests']
+            },
+            manager: {
+                title: 'Manager Home',
+                entries: ['Manager: Review team requests', 'Manager: Approve or reject requests']
+            },
+            hr: {
+                title: 'HR Home',
+                entries: ['HR Home: Open organization dashboard', 'HR Home: Filter and export requests']
+            }
+        };
+
+        const rawUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        const logoutButton = document.getElementById('logoutButton');
+        const logoutError = document.getElementById('logoutError');
+
+        async function logoutCurrentSession() {
+            try {
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Logout failed');
+                }
+
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/';
+            } catch (error) {
+                logoutError.textContent = error.message;
+                logoutError.style.display = 'block';
+            }
+        }
+
+        logoutButton.addEventListener('click', () => {
+            logoutCurrentSession();
+        });
+
+        if (!rawUser || !token) {
+            window.location.href = '/';
+        } else {
+            const user = JSON.parse(rawUser);
+            const roleConfig = roleConfigurations[user.role];
+
+            if (!roleConfig) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/';
+            } else {
+                document.getElementById('homeTitle').textContent = roleConfig.title;
+                document.getElementById('welcomeText').textContent = `Welcome, ${user.name}`;
+                document.getElementById('roleBadge').textContent = user.role;
+
+                const roleEntries = document.getElementById('roleEntries');
+                roleConfig.entries.forEach((entry) => {
+                    const item = document.createElement('li');
+                    item.textContent = entry;
+                    roleEntries.appendChild(item);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
